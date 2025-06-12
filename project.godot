@@ -11,10 +11,9 @@ config_version=5
 [application]
 
 config/name="SpriteMeshTool"
-run/main_scene="res://main.tscn"
+run/main_scene="res://scene/main.tscn"
 config/features=PackedStringArray("4.4")
-run/max_fps=30
-config/icon="res://icon.svg"
+run/max_fps=120
 
 [display]
 
@@ -25,7 +24,7 @@ window/stretch/scale_mode="integer"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/auto_load_tsc/plugin.cfg")
+enabled=PackedStringArray()
 
 [input]
 
@@ -86,4 +85,6 @@ cheat_speed_down={
 
 [rendering]
 
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
