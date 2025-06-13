@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://skefuy6wb2xn"]
+
+[ext_resource type="Script" uid="uid://cxqt6wnkkfyp" path="res://MeshEditor/Dot.gd" id="1_bqxwk"]
+
+[node name="Dot" type="Node2D"]
+script = ExtResource("1_bqxwk")
