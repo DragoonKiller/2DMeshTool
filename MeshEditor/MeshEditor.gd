@@ -65,13 +65,14 @@ func _input(event):
 		try_link()
 	
 	if event.is_action_pressed("CancelSelection"):
-		for dot in dots:
-			dot.selected = false
+		clear_selection()
 	
 	if event.is_action_pressed("Selection"):
 		selectFrom = get_global_mouse_position()
 		selectTo = selectFrom
 		updateSelection = true
+		if not Input.is_key_pressed(KEY_SHIFT):
+			clear_selection()
 	
 	if updateSelection and (event is InputEventMouseMotion):
 		selectTo = get_global_mouse_position()
@@ -102,11 +103,16 @@ func _draw():
 		color.a = 0.4
 		draw_rect(rect, color, false, 2)
 
+func clear_selection():
+	for dot in dots:
+		dot.selected = false
+
 func add_dot():
 	print('add dot!')
 	var dot = Dot.new()
 	dot.position = get_global_mouse_position()
 	dots.append(dot)
+	dot.name = String.num(dots.size() - 1)
 	add_child(dot)
 
 func try_link():
@@ -192,6 +198,7 @@ func deserialize():
 		var value :Vector2 = file.get_value("Dots", dotKey)
 		assert(i == dots.size())
 		var dot = Dot.new()
+		dot.name = String.num_int64(i)
 		dot.position = value
 		dots.append(dot)
 		add_child(dot)
