@@ -200,10 +200,12 @@ func deserialize():
 	for segKey in segKeys:
 		if segKey == "_":
 			continue
-		var i = int(segKey)
 		var value :Vector2i = file.get_value("Segments", segKey)
-		assert(i == segments.size())
 		var segment = Segment.new()
+		if not (0 <= value.x and value.x < dots.size()):
+			continue
+		if not (0 <= value.y and value.y < dots.size()):
+			continue
 		segment.from = value.x
 		segment.to = value.y
 		segment.dotArray = dots
