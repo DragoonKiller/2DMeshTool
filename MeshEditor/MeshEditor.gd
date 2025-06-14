@@ -3,31 +3,20 @@ extends Node2D
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
 
-"""
-shortcuts:
-	tab: change mode
-	
-modes:
-	move: controlling the move.
-	select: select points.
-"""
-
-enum Mode {
-	Move,
-	Select,
-}
+@export
+var dragFrom :Vector2 = Vector2.ZERO
 
 @export
-var mode :Mode = Mode.Move
-
-@export
-var selectFrom :Vector2 = Vector2.ZERO
-
-@export
-var selectTo :Vector2 = Vector2.ZERO
+var dragTo :Vector2 = Vector2.ZERO
 
 @export
 var updateSelection :bool = false
+
+@export
+var updateMove :bool = false
+
+@export
+var positionCopy :Array[Vector2] = []
 
 @export
 var dots :Array[Dot] = []
@@ -49,12 +38,6 @@ func _exit_tree() -> void:
 
 func _input(event):
 	
-	if event.is_action_pressed("ChangeMode"):
-		if mode == Mode.Move:
-			mode = Mode.Select
-		else:
-			mode = Mode.Move
-	
 	if event.is_action_pressed("Delete"):
 		delete_selection()
 	
@@ -68,17 +51,22 @@ func _input(event):
 		clear_selection()
 	
 	if event.is_action_pressed("Selection"):
-		selectFrom = get_global_mouse_position()
-		selectTo = selectFrom
-		updateSelection = true
-		if not Input.is_key_pressed(KEY_SHIFT):
-			clear_selection()
+		dragFrom = get_global_mouse_position()
+		dragTo = dragFrom
+		if Input.is_key_pressed(KEY_SPACE):
+			updateMove = true
+			positionCopy.assign(dots.map(func(x): return x.position))
+		else:
+			if not Input.is_key_pressed(KEY_SHIFT):
+				clear_selection()
+			updateSelection = true
 	
-	if updateSelection and (event is InputEventMouseMotion):
-		selectTo = get_global_mouse_position()
+	if event is InputEventMouseMotion:
+		dragTo = get_global_mouse_position()
 	
 	if event.is_action_released("Selection"):
-		selectTo = selectFrom
+		dragTo = dragFrom
+		updateMove = false
 		updateSelection = false
 
 func _notification(what):
@@ -88,10 +76,18 @@ func _notification(what):
 func _process(_dt: float) -> void:
 	
 	if updateSelection:
+		if not Input.is_key_pressed(KEY_SHIFT):
+			clear_selection()
 		var rect = get_selection_rect()
 		for dot in dots:
 			if rect.has_point(dot.position):
 				dot.selected = true
+	
+	if updateMove:
+		print(dragTo - dragFrom)
+		for i in range(dots.size()):
+			if dots[i].selected:
+				dots[i].position = positionCopy[i] + (dragTo - dragFrom)
 	
 	queue_redraw()
 
@@ -140,8 +136,8 @@ func selected_dots() -> Array[Dot]:
 	return dots.filter(func(x:Dot): return x.selected)
 
 func get_selection_rect():
-	var from = selectFrom.min(selectTo)
-	var to = selectFrom.max(selectTo)
+	var from = dragFrom.min(dragTo)
+	var to = dragFrom.max(dragTo)
 	var rect = Rect2(from, to - from)
 	return rect
 
