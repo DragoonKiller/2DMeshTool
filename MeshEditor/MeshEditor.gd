@@ -3,6 +3,31 @@ extends Node2D
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
 
+"""
+shortcuts:
+	tab: change mode
+	
+modes:
+	move: controlling the move.
+	select: select points.
+"""
+
+enum Mode {
+	Move,
+	Select,
+}
+
+@export
+var mode :Mode = Mode.Move
+
+@export
+var selectFrom :Vector2 = Vector2.ZERO
+
+@export
+var selectTo :Vector2 = Vector2.ZERO
+
+@export
+var updateSelection :bool = false
 
 @export
 var dots :Array[Dot] = []
@@ -23,14 +48,109 @@ func _exit_tree() -> void:
 	serialize()
 
 func _input(event):
-	if (event is InputEventKey) and event.pressed:
-		var keyEvent = event as InputEventKey
-		if keyEvent.keycode == KEY_A:
-			print('AA')
+	
+	if event.is_action_pressed("ChangeMode"):
+		if mode == Mode.Move:
+			mode = Mode.Select
+		else:
+			mode = Mode.Move
+	
+	if event.is_action_pressed("Delete"):
+		delete_selection()
+	
+	if event.is_action_pressed("AddDot"):
+		add_dot()
+	
+	if event.is_action_pressed("Link"):
+		try_link()
+	
+	if event.is_action_pressed("CancelSelection"):
+		for dot in dots:
+			dot.selected = false
+	
+	if event.is_action_pressed("Selection"):
+		selectFrom = get_global_mouse_position()
+		selectTo = selectFrom
+		updateSelection = true
+	
+	if updateSelection and (event is InputEventMouseMotion):
+		selectTo = get_global_mouse_position()
+	
+	if event.is_action_released("Selection"):
+		selectTo = selectFrom
+		updateSelection = false
 
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		serialize()
+
+func _process(_dt: float) -> void:
+	
+	if updateSelection:
+		var rect = get_selection_rect()
+		for dot in dots:
+			if rect.has_point(dot.position):
+				dot.selected = true
+	
+	queue_redraw()
+
+func _draw():
+	if updateSelection:
+		var rect = get_selection_rect()
+		var color = Color(1, 1, 1, 0.1)
+		draw_rect(rect, color, true)
+		color.a = 0.4
+		draw_rect(rect, color, false, 2)
+
+func add_dot():
+	print('add dot!')
+	var dot = Dot.new()
+	dot.position = get_global_mouse_position()
+	dots.append(dot)
+	add_child(dot)
+
+func try_link():
+	print('try link')
+	var selected = selected_dots()
+	print(selected, ' ', dots.size(), ' ', selected.size())
+	if selected.size() != 2:
+		return
+	for seg in segments:
+		var dot1 = seg.get_from()
+		var dot2 = seg.get_to()
+		if (dot1 == selected[0] and dot2 == selected[1]) or (dot1 == selected[0] and dot2 == selected[1]):
+			print('already linked')
+			return   # already linked
+	# not linked
+	print('link!')
+	var seg = Segment.new()
+	seg.from = dots.find(selected[0])
+	seg.to = dots.find(selected[1])
+	seg.dotArray = dots
+	segments.append(seg)
+	add_child(seg)
+
+func selected_dots() -> Array[Dot]:
+	return dots.filter(func(x:Dot): return x.selected)
+
+func get_selection_rect():
+	var from = selectFrom.min(selectTo)
+	var to = selectFrom.max(selectTo)
+	var rect = Rect2(from, to - from)
+	return rect
+
+func delete_selection():
+	var remove_segments = segments.filter(func(x:Segment): return x.get_from().selected or x.get_to().selected)
+	for seg :Segment in remove_segments:
+		seg.queue_free()
+	segments = segments.filter(func(x:Segment): return not (x.get_from().selected or x.get_to().selected))
+	
+	var to_be_removed = dots.filter(func(x:Dot): return x.selected)
+	for dot :Dot in to_be_removed:
+		dot.queue_free()
+	dots = dots.filter(func(x:Dot): return not x.selected)
+
+const file_path = "user://data.txt"
 
 func serialize():
 	print("serialize!")
@@ -49,18 +169,18 @@ func serialize():
 		var to :int = segments[i].to
 		file.set_value("Segments", String.num(i), Vector2i(from, to))
 	
-	var ok = file.save("user://data.txt")
+	var ok = file.save(file_path)
 	if ok != OK:
 		print("save error!", ok)
 	
-	print("save to [" + OS.get_data_dir() + "] => data.txt")
+	print("save to [" + ProjectSettings.globalize_path(file_path) + "]")
 
 func deserialize():
 	print("deserialize!")
-	print("read from [" + OS.get_data_dir() + "] => data.txt")
+	print("read from [" + ProjectSettings.globalize_path(file_path) + "]")
 	#load from data.txt
 	var file = ConfigFile.new()
-	var ok = file.load("user://data.txt")
+	var ok = file.load(file_path)
 	if ok != OK:
 		return # keep default data.
 	
@@ -74,6 +194,7 @@ func deserialize():
 		var dot = Dot.new()
 		dot.position = value
 		dots.append(dot)
+		add_child(dot)
 	
 	var segKeys = file.get_section_keys("Segments")
 	for segKey in segKeys:
@@ -85,4 +206,6 @@ func deserialize():
 		var segment = Segment.new()
 		segment.from = value.x
 		segment.to = value.y
+		segment.dotArray = dots
 		segments.append(segment)
+		add_child(segment)

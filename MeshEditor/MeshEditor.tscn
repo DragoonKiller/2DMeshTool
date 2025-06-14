@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3 uid="uid://uuaxpkshnho3"]
+[gd_scene load_steps=3 format=3 uid="uid://uuaxpkshnho3"]
 
 [ext_resource type="Script" uid="uid://d0jyp577b7as" path="res://MeshEditor/MeshEditor.gd" id="1_iatsp"]
+[ext_resource type="PackedScene" uid="uid://b8takbq0q8tk1" path="res://MeshEditor/Camera.tscn" id="2_t1cli"]
 
 [node name="MeshEditor" type="Node2D"]
 script = ExtResource("1_iatsp")
+
+[node name="Camera2D" parent="." instance=ExtResource("2_t1cli")]
