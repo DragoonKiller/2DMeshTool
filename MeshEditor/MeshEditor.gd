@@ -59,6 +59,12 @@ func _input(event):
 	if event.is_action_pressed("Undo"):
 		undo()
 	
+	if event.is_action_pressed("AlignHorizontal"):
+		align_horizontal()
+	
+	if event.is_action_pressed("AlignVertical"):
+		align_vertical()
+	
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
 		dragTo = dragFrom
@@ -194,3 +200,31 @@ func record_do():
 func undo():
 	undo_times += 1
 	DataSave.deserialize_backup(self, dots, segments, undo_times)
+
+func _center_of_selected_nodes():
+	var center = Vector2.ZERO
+	var count = 0
+	for dot in dots:
+		if dot.selected:
+			center = center + dot.position
+			count += 1
+	center /= count
+	return center
+
+func align_horizontal():
+	var center = _center_of_selected_nodes()
+	for dot in dots:
+		if dot.selected:
+			var pos = dot.position
+			pos.y = center.y
+			dot.position = pos
+	record_do()
+
+func align_vertical():
+	var center = _center_of_selected_nodes()
+	for dot in dots:
+		if dot.selected:
+			var pos = dot.position
+			pos.x = center.x
+			dot.position = pos
+	record_do()
