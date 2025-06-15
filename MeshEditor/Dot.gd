@@ -3,6 +3,9 @@ extends Node2D
 @export
 var _selected :bool = false
 
+const selectColor = Color(0.9, 0.6, 0.4, 1)
+const nonSelectColor = Color(0.8, 0.7, 0.2, 0.7)
+
 var selected:
 	get:
 		return _selected
@@ -16,9 +19,9 @@ func _process(_delta:float) -> void:
 func _draw() -> void:
 	
 	if _selected:
-		draw_circle(Vector2.ZERO, 5, Color.ANTIQUE_WHITE, true)
-		draw_string(ResIndex.get_default_font(), Vector2.UP * 10, self.name)
+		draw_circle(Vector2.ZERO, 3, selectColor, true)
+		draw_string(Utils.font_default, Vector2.UP * 10, self.name)
 	else:
-		draw_circle(Vector2.ZERO, 5, Color.CORNFLOWER_BLUE, true)
+		draw_circle(Vector2.ZERO, 3, nonSelectColor, true)
 		
 	

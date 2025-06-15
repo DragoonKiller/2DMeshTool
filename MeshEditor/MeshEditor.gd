@@ -43,6 +43,9 @@ func _input(event):
 	
 	if event.is_action_pressed("AddDot"):
 		add_dot()
+		
+	if event.is_action_pressed("AddDotLinked"):
+		add_dot_linked()
 	
 	if event.is_action_pressed("Link"):
 		try_link()
@@ -98,6 +101,13 @@ func _draw():
 		draw_rect(rect, color, true)
 		color.a = 0.4
 		draw_rect(rect, color, false, 2)
+	
+	var info = ""
+	if updateMove:
+		info = "Move"
+	elif updateSelection:
+		info = "Select"
+	draw_string(Utils.font_default, Utils.screen_bottom_left + Vector2.UP * 10, info, HORIZONTAL_ALIGNMENT_LEFT)
 
 func clear_selection():
 	for dot in dots:
@@ -110,6 +120,19 @@ func add_dot():
 	dots.append(dot)
 	dot.name = String.num(dots.size() - 1)
 	add_child(dot)
+
+func add_dot_linked():
+	print('add dot linked!')
+	add_dot()
+	var new_dot = dots[-1]
+	var selected = selected_dots()
+	if selected.size() != 1:
+		return
+	var prevSelected = selected[0]
+	prevSelected.selected = true
+	new_dot.selected = true
+	try_link()
+	prevSelected.selected = false
 
 func try_link():
 	print('try link')

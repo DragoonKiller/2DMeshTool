@@ -28,6 +28,16 @@ var screen_bottom_right:
 		var size = world_visual_rect.size * 0.5 / main_camera.zoom
 		return main_camera.global_position + size
 
-var camera_zoom:
+var camera_zoom :float:
 	get:
-		return main_camera.zoom
+		return main_camera.zoom.x
+
+
+var _font_default :Font
+var font_default:
+	get:
+		if not _font_default:
+			var label = Label.new()
+			_font_default = label.get_theme_font("")
+			label.free()
+		return _font_default

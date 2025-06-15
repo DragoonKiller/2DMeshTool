@@ -6,7 +6,7 @@ var dialog :FileDialog
 @export
 var image :Image
 
-var previous_path:
+var previous_path :String:
 	get:
 		var file = FileAccess.open("user://previous_path.txt", FileAccess.READ)
 		if file == null:
@@ -17,6 +17,14 @@ var previous_path:
 	set(value):
 		var file = FileAccess.open("user://previous_path.txt", FileAccess.WRITE)
 		file.store_string(value)
+
+func _ready() -> void:
+	var color = modulate
+	color.a = 0.5
+	modulate = color
+	var path = previous_path
+	if path != null and path != "":
+		load_image(path)
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("AddTransparency"):
@@ -34,7 +42,7 @@ func _input(event: InputEvent) -> void:
 			dialog = FileDialog.new()
 		if dialog.visible:
 			dialog.hide()
-		dialog.connect("file_selected", on_file_selected)
+		dialog.connect("file_selected", load_image)
 		dialog.access = FileDialog.ACCESS_FILESYSTEM
 		# dialog.use_native_dialog = true
 		dialog.file_mode = FileDialog.FILE_MODE_OPEN_ANY
@@ -43,25 +51,27 @@ func _input(event: InputEvent) -> void:
 			"*.png",
 			"*.jpg"
 		]
-		dialog.current_dir = previous_path
+		dialog.current_dir = previous_path.get_base_dir()
 		print('assigned path:', dialog.current_dir)
 		add_child(dialog)
 		dialog.show()
 
-func on_file_selected(path: String):
+func on_file_selected(path :String):
+	load_image(path)
+	dialog.queue_free()
+	dialog = null
+
+func load_image(path: String):
 	print('select file ', path)
 	
 	if not (path.ends_with("jpg") or path.ends_with("png")):
 		return
 		
-	previous_path = path.get_base_dir()
+	previous_path = path
 	
 	image = Image.load_from_file(path)
 	
 	texture = ImageTexture.create_from_image(image)
-	
-	dialog.queue_free()
-	dialog = null
 
 func _process(_delta: float) -> void:
 	queue_redraw()

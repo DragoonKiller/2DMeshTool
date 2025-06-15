@@ -9,6 +9,9 @@ var to :int = -1
 @export
 var dotArray :Array[Dot] = []
 
+const nonSelectColor = Color(0.9, 0.6, 0.4, 0.8)
+const selectColor = Color(0.8, 0.7, 0.2, 1)
+
 func get_from():
 	return dotArray[from]
 
@@ -30,7 +33,7 @@ func _draw():
 	var fromPos = fromDot.position
 	var toPos = toDot.position
 	if selected:
-		draw_line(fromPos, toPos, Color.SANDY_BROWN, -2)
+		draw_line(fromPos, toPos, selectColor, 2)
 	else:
-		draw_line(fromPos, toPos, Color.DARK_BLUE, -2)
+		draw_line(fromPos, toPos, nonSelectColor, 2)
 	

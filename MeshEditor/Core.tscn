@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://dyqpwuhgjsucq"]
+
+[ext_resource type="PackedScene" uid="uid://uuaxpkshnho3" path="res://MeshEditor/MeshEditor.tscn" id="1_bxrg4"]
+[ext_resource type="PackedScene" uid="uid://c52mtnaomn1cg" path="res://MeshEditor/SpriteDisplay.tscn" id="2_shq6b"]
+
+[node name="Core" type="Node2D"]
+
+[node name="SpriteDisplay" parent="." instance=ExtResource("2_shq6b")]
+
+[node name="MeshEditor" parent="." instance=ExtResource("1_bxrg4")]
