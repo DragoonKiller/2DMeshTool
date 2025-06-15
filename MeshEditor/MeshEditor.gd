@@ -46,12 +46,15 @@ func _input(event):
 	
 	if event.is_action_pressed("AddDot") and not event.is_action_pressed("AddDotLinked"):
 		add_dot()
+		record_do()
 		
 	if event.is_action_pressed("AddDotLinked"):
 		add_dot_linked()
+		record_do()
 	
 	if event.is_action_pressed("Link"):
 		try_link()
+		record_do()
 	
 	if event.is_action_pressed("CancelSelection"):
 		clear_selection()
@@ -61,10 +64,20 @@ func _input(event):
 	
 	if event.is_action_pressed("AlignHorizontal"):
 		align_horizontal()
+		record_do()
 	
 	if event.is_action_pressed("AlignVertical"):
 		align_vertical()
+		record_do()
 	
+	if event.is_action_pressed("DeleteEdge"):
+		delete_edge()
+		record_do()
+	
+	if event.is_action_pressed("Split"):
+		split()
+		record_do()
+		
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
 		dragTo = dragFrom
@@ -132,27 +145,26 @@ func add_dot():
 	var dot = Dot.new()
 	dot.position = get_global_mouse_position()
 	dots.append(dot)
-	dot.name = String.num(dots.size() - 1)
+	dot.name = String.num(dots.size())
 	add_child(dot)
-	record_do()
+	return dot
 
 func add_dot_linked():
 	print('add dot linked!')
-	add_dot()
-	var new_dot = dots[-1]
-	var selected = selected_dots()
+	var dot = add_dot()
+	var selected = get_selected_dots()
 	if selected.size() != 1:
 		return
 	var prevSelected = selected[0]
 	prevSelected.selected = true
-	new_dot.selected = true
+	dot.selected = true
 	try_link()
 	prevSelected.selected = false
-	record_do()
+	return dot
 
 func try_link():
 	print('try link')
-	var selected = selected_dots()
+	var selected = get_selected_dots()
 	print(selected, ' ', dots.size(), ' ', selected.size())
 	if selected.size() != 2:
 		return
@@ -164,15 +176,18 @@ func try_link():
 			return   # already linked
 	# not linked
 	print('link!')
+	return add_link(selected[0], selected[1])
+
+func add_link(from :Dot, to :Dot):
 	var seg = Segment.new()
-	seg.from = dots.find(selected[0])
-	seg.to = dots.find(selected[1])
+	seg.from = dots.find(from)
+	seg.to = dots.find(to)
 	seg.dotArray = dots
 	segments.append(seg)
 	add_child(seg)
-	record_do()
+	return seg
 
-func selected_dots() -> Array[Dot]:
+func get_selected_dots() -> Array[Dot]:
 	return dots.filter(func(x:Dot): return x.selected)
 
 func get_selection_rect():
@@ -218,7 +233,6 @@ func align_horizontal():
 			var pos = dot.position
 			pos.y = center.y
 			dot.position = pos
-	record_do()
 
 func align_vertical():
 	var center = _center_of_selected_nodes()
@@ -227,4 +241,39 @@ func align_vertical():
 			var pos = dot.position
 			pos.x = center.x
 			dot.position = pos
-	record_do()
+
+func delete_edge():
+	var to_be_removed = { }
+	for seg in segments:
+		var from = seg.get_from()
+		var to = seg.get_to()
+		if from.selected and to.selected:
+			to_be_removed[seg] = 0
+			seg.queue_free()
+	segments = segments.filter(func(seg:Segment): return not to_be_removed.has(seg))
+
+func split():
+	var selected = get_selected_dots()
+	if selected.size() != 2:
+		return
+	
+	var selectedSegments :Array[Segment] = []
+	selectedSegments.assign(segments.filter(func(seg:Segment): return selected.has(seg.get_from()) and selected.has(seg.get_to())))
+	if selectedSegments.size() == 0:
+		return
+	
+	for splitSeg in selectedSegments:
+		var a = splitSeg.get_from()
+		var b = splitSeg.get_to()
+		
+		# new node
+		var c = add_dot()
+		c.position = (a.position + b.position) / 2
+		
+		# split segment [a -> b] change to [a -> c]
+		splitSeg.to = dots.size() - 1
+		print(splitSeg.from, splitSeg.to)
+		
+		# new segment [b -> c]
+		add_link(b, c)
+	

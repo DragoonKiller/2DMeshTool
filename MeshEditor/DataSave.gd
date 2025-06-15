@@ -64,14 +64,14 @@ func serialize(dots :Array[Dot], segments :Array[Segment]):
 	file.set_value("Dots", "_", "_")
 	
 	for i in dots.size():
-		file.set_value("Dots", String.num(i), dots[i].position)
+		file.set_value("Dots", String.num_int64(i), dots[i].position)
 	
 	file.set_value("Segments", "_", "_")
 	
 	for i in segments.size():
 		var from :int = segments[i].from
 		var to :int = segments[i].to
-		file.set_value("Segments", String.num(i), Vector2i(from, to))
+		file.set_value("Segments", String.num_int64(i), Vector2i(from, to))
 	
 	if FileAccess.file_exists(file_path):
 		Utils.copy_external_file(file_path, file_path + ".back")

@@ -2,7 +2,7 @@ extends Camera2D
 
 var zoom_speed = 0.05
 var min_zoom = 0.1
-var max_zoom = 3.0
+var max_zoom = 10.0
 var is_dragging = false
 var drag_origin = Vector2.ZERO
 
