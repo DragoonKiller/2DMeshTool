@@ -41,3 +41,20 @@ var font_default:
 			_font_default = label.get_theme_font("")
 			label.free()
 		return _font_default
+
+func copy_external_file(source_path: String, destination_path: String) -> bool:
+	var source_file = FileAccess.open(source_path, FileAccess.READ)
+	if not source_file:
+		print("Failed to open source file")
+		return false
+
+	var dest_file = FileAccess.open(destination_path, FileAccess.WRITE)
+	if not dest_file:
+		print("Failed to open destination file")
+		source_file.close()
+		return false
+
+	dest_file.store_buffer(source_file.get_buffer(source_file.get_length()))
+	source_file.close()
+	dest_file.close()
+	return true
