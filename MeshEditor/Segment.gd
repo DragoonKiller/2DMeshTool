@@ -30,7 +30,7 @@ func _draw():
 	var fromPos = fromDot.position
 	var toPos = toDot.position
 	if selected:
-		draw_line(fromPos, toPos, Color.SANDY_BROWN, 2.5)
+		draw_line(fromPos, toPos, Color.SANDY_BROWN, -2)
 	else:
-		draw_line(fromPos, toPos, Color.DARK_BLUE, 1.5, true)
+		draw_line(fromPos, toPos, Color.DARK_BLUE, -2)
 	
