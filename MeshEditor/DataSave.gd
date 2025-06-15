@@ -86,6 +86,30 @@ func serialize(dots :Array[Dot], segments :Array[Segment]):
 	
 	print("save to [" + ProjectSettings.globalize_path(file_path) + "]")
 
+func serialize_to_destination(dots :Array[Dot], segments :Array[Segment], pathOrigin :String):
+	print("serialize to destination!")
+	
+	var basename = pathOrigin.get_basename()
+	var path = basename + ".txt"
+	
+	# save to data.txt
+	var file = ConfigFile.new()
+	
+	for i in dots.size():
+		file.set_value("Dots", String.num_int64(i), dots[i].position)
+	
+	for i in segments.size():
+		var from :int = segments[i].from
+		var to :int = segments[i].to
+		file.set_value("Segments", String.num_int64(i), Vector2i(from, to))
+	
+	var ok = file.save(path)
+	if ok != OK:
+		print("save error!", ok)
+	
+	print("save to [" + ProjectSettings.globalize_path(path) + "]")
+	
+
 func deserialize_backup(root :Node, dots :Array[Dot], segments :Array[Segment], n :int):
 	var found = _get_all_backup_numbers("user://data.txt")
 	if found.size() <= n:

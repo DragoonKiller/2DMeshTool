@@ -6,13 +6,16 @@ var dialog :FileDialog
 @export
 var image :Image
 
+@export
+var image_path :String
+
 var previous_path :String:
 	get:
 		var file = FileAccess.open("user://previous_path.txt", FileAccess.READ)
 		if file == null:
 			return ""
 		var res = file.get_line()
-		print('get path:', res)
+		print('get image_path:', res)
 		return res
 	set(value):
 		var file = FileAccess.open("user://previous_path.txt", FileAccess.WRITE)
@@ -22,9 +25,11 @@ func _ready() -> void:
 	var color = modulate
 	color.a = 0.5
 	modulate = color
-	var path = previous_path
-	if path != null and path != "":
-		load_image(path)
+	image_path = previous_path
+	if image_path != null and image_path != "":
+		load_image(image_path)
+	else:
+		image_path = ""
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("AddTransparency"):
@@ -52,7 +57,7 @@ func _input(event: InputEvent) -> void:
 			"*.jpg"
 		]
 		dialog.current_dir = previous_path.get_base_dir()
-		print('assigned path:', dialog.current_dir)
+		print('assigned image_path:', dialog.current_dir)
 		add_child(dialog)
 		dialog.show()
 

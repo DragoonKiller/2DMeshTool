@@ -2,6 +2,7 @@ extends Node2D
 
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
+const SpriteDisplay = preload("res://MeshEditor/SpriteDisplay.gd")
 
 @export
 var dragFrom :Vector2 = Vector2.ZERO
@@ -88,6 +89,12 @@ func _input(event):
 		
 	if event.is_action_pressed("Save"):
 		DataSave.serialize(dots, segments)
+	
+	if event.is_action_pressed("SaveToDestination"):
+		var path :String = (get_parent().find_child("SpriteDisplay") as SpriteDisplay).image_path
+		
+		if not (path == null or path == ""):
+			DataSave.serialize_to_destination(dots, segments, path)
 	
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
@@ -309,7 +316,8 @@ const actions := [
 	"MirrorHorizontal",
 	"MirrorVertical",
 	"Save",
-	"Selection"
+	"Selection",
+	"SaveToDestination"
 ]
 
 func _draw_op_hints():
