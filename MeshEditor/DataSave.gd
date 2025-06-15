@@ -35,7 +35,7 @@ func _get_all_backup_numbers(base_path: String) -> Array:
 	return numbers
 
 func find_latest_backup_file(base_path: String) -> String:
-	var backups := _get_all_backup_numbers(base_path)
+	var backups = _get_all_backup_numbers(base_path)
 	if backups.is_empty():
 		return ""
 	

@@ -14,14 +14,16 @@ var selected:
 		queue_redraw()
 
 func _process(_delta:float) -> void:
-	pass
+	queue_redraw()
 
 func _draw() -> void:
 	
 	if _selected:
-		draw_circle(Vector2.ZERO, 3, selectColor, true)
-		draw_string(Utils.font_default, Vector2.UP * 10, self.name)
+		draw_circle(Vector2.ZERO, 3 * Utils.camera_zoom_scale, selectColor, true)
+		draw_set_transform(Vector2.ZERO, rotation, scale * min(0.5, Utils.camera_zoom_scale))
+		draw_string(Utils.font_default, Vector2.UP * 10, self.name, HORIZONTAL_ALIGNMENT_LEFT, -1, 24)
+		draw_set_transform(Vector2.ZERO, rotation, scale)
 	else:
-		draw_circle(Vector2.ZERO, 3, nonSelectColor, true)
+		draw_circle(Vector2.ZERO, 3 * Utils.camera_zoom_scale, nonSelectColor, true)
 		
 	

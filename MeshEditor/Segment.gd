@@ -33,7 +33,7 @@ func _draw():
 	var fromPos = fromDot.position
 	var toPos = toDot.position
 	if selected:
-		draw_line(fromPos, toPos, selectColor, 2)
+		draw_line(fromPos, toPos, selectColor, 2 * Utils.camera_zoom_scale)
 	else:
-		draw_line(fromPos, toPos, nonSelectColor, 2)
+		draw_line(fromPos, toPos, nonSelectColor, 2 * Utils.camera_zoom_scale)
 	

@@ -93,6 +93,11 @@ func _draw():
 	draw_line(bottom_right, bottom_left, Color.WHITE, -1.0)
 	draw_line(bottom_left, top_left, Color.WHITE, -1.0)
 	
+	# Draw center line
+	draw_line(Vector2(0, top_left.y), Vector2(0, bottom_right.y), Color(1, 0.4, 0.4, 0.5))
+	# Draw center line
+	draw_line(Vector2(top_left.x, 0), Vector2(bottom_right.x, 0), Color(1, 0.4, 0.4, 0.5))
+	
 	# Draw vertical grid lines
 	var x = top_left.x + cell_size
 	while x < bottom_right.x:

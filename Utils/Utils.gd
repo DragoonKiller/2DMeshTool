@@ -28,10 +28,17 @@ var screen_bottom_right:
 		var size = world_visual_rect.size * 0.5 / main_camera.zoom
 		return main_camera.global_position + size
 
+var screen_center:
+	get:
+		return main_camera.global_position
+
 var camera_zoom :float:
 	get:
 		return main_camera.zoom.x
 
+var camera_zoom_scale :float:
+	get:
+		return 1 / main_camera.zoom.x
 
 var _font_default :Font
 var font_default:
@@ -58,3 +65,17 @@ func copy_external_file(source_path: String, destination_path: String) -> bool:
 	source_file.close()
 	dest_file.close()
 	return true
+
+func get_keys_for_action(action_name: String) -> Array:
+	var keys := []
+	var events := InputMap.action_get_events(action_name)
+	for e in events:
+		if e is InputEventKey:
+			var keycode = e.physical_keycode if e.physical_keycode != 0 else e.keycode
+			var key_name = OS.get_keycode_string(keycode)
+			keys.append(key_name)
+		elif e is InputEventMouseButton:
+			keys.append("Mouse" + str(e.button_index))
+		elif e is InputEventJoypadButton:
+			keys.append("Joy" + str(e.button_index))
+	return keys

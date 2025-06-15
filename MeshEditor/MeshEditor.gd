@@ -78,6 +78,17 @@ func _input(event):
 		split()
 		record_do()
 		
+	if event.is_action_pressed("MirrorHorizontal"):
+		mirror_horizontal()
+		record_do()
+	
+	if event.is_action_pressed("MirrorVertical"):
+		mirror_vertical()
+		record_do()
+		
+	if event.is_action_pressed("Save"):
+		DataSave.serialize(dots, segments)
+	
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
 		dragTo = dragFrom
@@ -129,12 +140,7 @@ func _draw():
 		color.a = 0.4
 		draw_rect(rect, color, false, 2)
 	
-	var info = ""
-	if updateMove:
-		info = "Move"
-	elif updateSelection:
-		info = "Select"
-	draw_string(Utils.font_default, Utils.screen_bottom_left + Vector2.UP * 10, info, HORIZONTAL_ALIGNMENT_LEFT)
+	_draw_op_hints()
 
 func clear_selection():
 	for dot in dots:
@@ -277,3 +283,43 @@ func split():
 		# new segment [b -> c]
 		add_link(b, c)
 	
+func mirror_horizontal():
+	for dot in dots:
+		var p = dot.position
+		p.x = -p.x
+		dot.position = p
+
+func mirror_vertical():
+	for dot in dots:
+		var p = dot.position
+		p.y = -p.y
+		dot.position = p
+		
+const actions := [
+	"Delete",
+	"AddDot",
+	"AddDotLinked",
+	"Link",
+	"CancelSelection",
+	"Undo",
+	"AlignHorizontal",
+	"AlignVertical",
+	"DeleteEdge",
+	"Split",
+	"MirrorHorizontal",
+	"MirrorVertical",
+	"Save",
+	"Selection"
+]
+
+func _draw_op_hints():
+	var base_pos = Utils.screen_bottom_left + Vector2.UP * 10 * Utils.camera_zoom_scale
+	var line_height = 16 * Utils.camera_zoom_scale
+	draw_set_transform(Vector2.ZERO, 0, Vector2.ONE * Utils.camera_zoom_scale)
+	for i in actions.size():
+		var action = actions[i]
+		var pos = base_pos + Vector2.UP * line_height * i
+		var keys = Utils.get_keys_for_action(action)
+		var keyStrings = ", ".join(keys)
+		var text = "%s: %s" % [action, keyStrings]
+		draw_string(Utils.font_default, pos / Utils.camera_zoom_scale, text, HORIZONTAL_ALIGNMENT_LEFT)
