@@ -116,6 +116,17 @@ func serialize_to_destination(pathOrigin: String):
 		poly = poly.map(func(x:Dot): return dots.find(x))
 		file.set_value("Polys", String.num_int64(i), poly)
 
+	for anchor in anchors:
+		var result = -1
+		for i in range(polys.size()):
+			var poly = polys[i]
+			var positions = PackedVector2Array(poly.map(func(x:Dot): return x.position))
+			if Geometry2D.is_point_in_polygon(anchor.position, positions):
+				result = i
+				break
+		file.set_value("AnchorPolys", anchor.component_name, result)
+		
+
 	var ok = file.save(path)
 	if ok != OK:
 		print("save error!", ok)
