@@ -12,10 +12,10 @@ var dotArray :Array[Dot] = []
 const selectColor = Color(0.9, 0.6, 0.4, 0.8)
 const nonSelectColor = Color(0.8, 0.7, 0.2, 1)
 
-func get_from():
+func get_from() -> Dot:
 	return dotArray[from]
 
-func get_to():
+func get_to() -> Dot:
 	return dotArray[to]
 
 func _process(_delta:float):

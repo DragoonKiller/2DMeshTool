@@ -4,8 +4,21 @@ class_name BackupManager
 
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
+const Anchor = preload("res://MeshEditor/Anchor.gd")
 
 const file_path = "user://data.txt"
+
+@export
+var dots :Array[Dot] = []
+
+@export
+var segments :Array[Segment] = []
+
+@export
+var anchors :Array[Anchor] = []
+
+@export
+var root:Node
 
 func _get_backup_number(file_name: String, base_name: String) -> int:
 	if file_name.begins_with(base_name + ".") and file_name.ends_with(".back"):
@@ -56,23 +69,29 @@ func find_next_backup_file(base_path: String) -> String:
 	var base_name := base_path.get_file()
 	return "user://%s.%d.back" % [base_name, next_num]
 
-func serialize(dots :Array[Dot], segments :Array[Segment]):
-	print("serialize!")
-	# save to data.txt
-	var file = ConfigFile.new()
-	
-	file.set_value("Dots", "_", "_")
-	
+func serialize_core(file: ConfigFile, use_placeholder:bool):
+	if use_placeholder:
+		file.set_value("Dots", "_", "_")
 	for i in dots.size():
 		file.set_value("Dots", String.num_int64(i), dots[i].position)
 	
-	file.set_value("Segments", "_", "_")
-	
+	if use_placeholder:
+		file.set_value("Segments", "_", "_")
 	for i in segments.size():
-		var from :int = segments[i].from
-		var to :int = segments[i].to
+		var from: int = segments[i].from
+		var to: int = segments[i].to
 		file.set_value("Segments", String.num_int64(i), Vector2i(from, to))
-	
+		
+	if use_placeholder:
+		file.set_value("Anchors", "_", "_")
+	for i in anchors.size():
+		file.set_value("Anchors", String.num_int64(i), anchors[i].position)
+
+func serialize():
+	print("serialize!")
+	var file = ConfigFile.new()
+	serialize_core(file, true)
+
 	if FileAccess.file_exists(file_path):
 		Utils.copy_external_file(file_path, file_path + ".back")
 	
@@ -83,42 +102,30 @@ func serialize(dots :Array[Dot], segments :Array[Segment]):
 	var ok = file.save(file_path)
 	if ok != OK:
 		print("save error!", ok)
-	
 	print("save to [" + ProjectSettings.globalize_path(file_path) + "]")
 
-func serialize_to_destination(dots :Array[Dot], segments :Array[Segment], pathOrigin :String):
+
+func serialize_to_destination(pathOrigin: String):
 	print("serialize to destination!")
-	
 	var basename = pathOrigin.get_basename()
 	var path = basename + ".txt"
-	
-	# save to data.txt
 	var file = ConfigFile.new()
-	
-	for i in dots.size():
-		file.set_value("Dots", String.num_int64(i), dots[i].position)
-	
-	for i in segments.size():
-		var from :int = segments[i].from
-		var to :int = segments[i].to
-		file.set_value("Segments", String.num_int64(i), Vector2i(from, to))
-	
+	serialize_core(file, false)
+
 	var ok = file.save(path)
 	if ok != OK:
 		print("save error!", ok)
-	
 	print("save to [" + ProjectSettings.globalize_path(path) + "]")
-	
 
-func deserialize_backup(root :Node, dots :Array[Dot], segments :Array[Segment], n :int):
+func deserialize_backup(n :int):
 	var found = _get_all_backup_numbers("user://data.txt")
 	if found.size() <= n:
 		print('no backup can be taken!')
 		return
-	deserialize(root, dots, segments, "user://" + found[-n].file)
+	deserialize("user://" + found[-n].file)
 	
 
-func deserialize(root :Node, dots :Array[Dot], segments :Array[Segment], path = file_path):
+func deserialize(path = file_path):
 	print("deserialize!")
 	print("read from [" + ProjectSettings.globalize_path(path) + "]")
 	#load from data.txt
@@ -141,24 +148,62 @@ func deserialize(root :Node, dots :Array[Dot], segments :Array[Segment], path = 
 		var i = int(dotKey)
 		var value :Vector2 = file.get_value("Dots", dotKey)
 		assert(i == dots.size())
-		var dot = Dot.new()
-		dot.name = String.num_int64(i)
-		dot.position = value
-		dots.append(dot)
-		root.add_child(dot)
+		new_dot(value)
 	
 	var segKeys = file.get_section_keys("Segments")
 	for segKey in segKeys:
 		if segKey == "_":
 			continue
 		var value :Vector2i = file.get_value("Segments", segKey)
-		var segment = Segment.new()
 		if not (0 <= value.x and value.x < dots.size()):
 			continue
 		if not (0 <= value.y and value.y < dots.size()):
 			continue
-		segment.from = value.x
-		segment.to = value.y
-		segment.dotArray = dots
-		segments.append(segment)
-		root.add_child(segment)
+		new_segment(value.x, value.y)
+		
+	var anchorKeys = file.get_section_keys("Anchors")
+	for anchorKey in anchorKeys:
+		if anchorKey == "_":
+			continue
+		var value :Vector2 = file.get_value("Anchors", anchorKey)
+		new_anchor(value, anchorKey)
+
+
+func new_dot(position:Vector2) -> Dot:
+	var dot = Dot.new()
+	dot.name = String.num_uint64(dots.size())
+	dot.position = position
+	dots.append(dot)
+	root.add_child(dot)
+	return dot
+
+func new_segment(from:int, to:int) -> Segment:
+	var segment = Segment.new()
+	segment.from = from
+	segment.to = to
+	segment.dotArray = dots
+	segment.name = String.num_int64(segments.size())
+	segments.append(segment)
+	root.add_child(segment)
+	return segment
+
+func new_segment_from_dots(from:Dot, to:Dot) -> Segment:
+	var fromIndex = dots.find(from)
+	var toIndex = dots.find(to)
+	if fromIndex < 0:
+		return
+	if toIndex < 0:
+		return
+	return new_segment(fromIndex, toIndex)
+	
+func new_anchor(position:Vector2, anchor_name:String = "") -> Anchor:
+	if anchor_name == null or anchor_name == "":
+		print('invalid name!')
+		return
+	var anchor = Anchor.new()
+	anchor.position = position
+	anchor.name = name
+	anchors.append(anchor)
+	root.add_child(anchor)
+	return anchor
+	

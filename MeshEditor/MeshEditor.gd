@@ -2,7 +2,9 @@ extends Node2D
 
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
+const Anchor = preload("res://MeshEditor/Anchor.gd")
 const SpriteDisplay = preload("res://MeshEditor/SpriteDisplay.gd")
+const Data = preload("res://MeshEditor/Data.gd")
 
 @export
 var dragFrom :Vector2 = Vector2.ZERO
@@ -20,12 +22,6 @@ var updateMove :bool = false
 var positionCopy :Array[Vector2] = []
 
 @export
-var dots :Array[Dot] = []
-
-@export
-var segments :Array[Segment] = []
-
-@export
 var selectedDotsIndex :Array[int] = []
 
 @export
@@ -34,11 +30,14 @@ var selectedSegmentsIndex :Array[int] = []
 @export
 var undo_times :int = 0
 
+@export
+var data:Data
+
 func _ready() -> void:
-	DataSave.deserialize(self, dots, segments)
+	data.deserialize()
 
 func _exit_tree() -> void:
-	DataSave.serialize(dots, segments)
+	data.serialize()
 
 func _input(event):
 	
@@ -46,7 +45,7 @@ func _input(event):
 		delete_selection()
 	
 	if event.is_action_pressed("AddDot") and not event.is_action_pressed("AddDotLinked"):
-		add_dot()
+		data.new_dot(get_global_mouse_position())
 		record_do()
 		
 	if event.is_action_pressed("AddDotLinked"):
@@ -86,22 +85,26 @@ func _input(event):
 	if event.is_action_pressed("MirrorVertical"):
 		mirror_vertical()
 		record_do()
-		
+	
+	if event.is_action_pressed("AddAnchor"):
+		data.new_anchor(get_global_mouse_position(), "NewAnchor")
+		record_do()
+	
 	if event.is_action_pressed("Save"):
-		DataSave.serialize(dots, segments)
+		data.serialize()
 	
 	if event.is_action_pressed("SaveToDestination"):
 		var path :String = (get_parent().find_child("SpriteDisplay") as SpriteDisplay).image_path
 		
 		if not (path == null or path == ""):
-			DataSave.serialize_to_destination(dots, segments, path)
+			data.serialize_to_destination(path)
 	
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
 		dragTo = dragFrom
 		if Input.is_key_pressed(KEY_SPACE):
 			updateMove = true
-			positionCopy.assign(dots.map(func(x): return x.position))
+			positionCopy.assign(data.dots.map(func(x): return x.position))
 		else:
 			if not Input.is_key_pressed(KEY_SHIFT):
 				clear_selection()
@@ -119,23 +122,20 @@ func _input(event):
 
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		DataSave.serialize(dots, segments)
+		data.serialize()
 
 func _process(_dt: float) -> void:
 	
 	if updateSelection:
 		if not Input.is_key_pressed(KEY_SHIFT):
 			clear_selection()
-		var rect = get_selection_rect()
-		for dot in dots:
-			if rect.has_point(dot.position):
-				dot.selected = true
+		update_selection()
 	
 	if updateMove:
 		print(dragTo - dragFrom)
-		for i in range(dots.size()):
-			if dots[i].selected:
-				dots[i].position = positionCopy[i] + (dragTo - dragFrom)
+		for i in range(data.dots.size()):
+			if data.dots[i].selected:
+				data.dots[i].position = positionCopy[i] + (dragTo - dragFrom)
 	
 	queue_redraw()
 
@@ -150,21 +150,23 @@ func _draw():
 	_draw_op_hints()
 
 func clear_selection():
-	for dot in dots:
+	for dot in data.dots:
 		dot.selected = false
+	for anchor in data.anchors:
+		anchor.selected = false
 
-func add_dot():
-	print('add dot!')
-	var dot = Dot.new()
-	dot.position = get_global_mouse_position()
-	dots.append(dot)
-	dot.name = String.num(dots.size())
-	add_child(dot)
-	return dot
+func update_selection():
+	var rect = get_selection_rect()
+	for dot in data.dots:
+		if rect.has_point(dot.position):
+			dot.selected = true
+	for anchor in data.anchors:
+		if rect.has_point(anchor.position):
+			anchor.selected = true
 
 func add_dot_linked():
 	print('add dot linked!')
-	var dot = add_dot()
+	var dot = data.new_dot(get_global_mouse_position())
 	var selected = get_selected_dots()
 	if selected.size() != 1:
 		return
@@ -177,11 +179,11 @@ func add_dot_linked():
 
 func try_link():
 	print('try link')
-	var selected = get_selected_dots()
-	print(selected, ' ', dots.size(), ' ', selected.size())
+	var selected := get_selected_dots()
+	print(selected, ' ', data.dots.size(), ' ', selected.size())
 	if selected.size() != 2:
 		return
-	for seg in segments:
+	for seg in data.segments:
 		var dot1 = seg.get_from()
 		var dot2 = seg.get_to()
 		if (dot1 == selected[0] and dot2 == selected[1]) or (dot1 == selected[0] and dot2 == selected[1]):
@@ -189,19 +191,10 @@ func try_link():
 			return   # already linked
 	# not linked
 	print('link!')
-	return add_link(selected[0], selected[1])
-
-func add_link(from :Dot, to :Dot):
-	var seg = Segment.new()
-	seg.from = dots.find(from)
-	seg.to = dots.find(to)
-	seg.dotArray = dots
-	segments.append(seg)
-	add_child(seg)
-	return seg
+	return data.new_segment_from_dots(selected[0], selected[1])
 
 func get_selected_dots() -> Array[Dot]:
-	return dots.filter(func(x:Dot): return x.selected)
+	return data.dots.filter(func(x:Dot): return x.selected)
 
 func get_selection_rect():
 	var from = dragFrom.min(dragTo)
@@ -210,29 +203,33 @@ func get_selection_rect():
 	return rect
 
 func delete_selection():
-	var remove_segments = segments.filter(func(x:Segment): return x.get_from().selected or x.get_to().selected)
+	var remove_segments = data.segments.filter(func(x:Segment): return x.get_from().selected or x.get_to().selected)
 	for seg :Segment in remove_segments:
 		seg.queue_free()
-	segments = segments.filter(func(x:Segment): return not (x.get_from().selected or x.get_to().selected))
+	data.segments = data.segments.filter(func(x:Segment): return not (x.get_from().selected or x.get_to().selected))
 	
-	var to_be_removed = dots.filter(func(x:Dot): return x.selected)
-	for dot :Dot in to_be_removed:
+	var remove_dots = data.dots.filter(func(x:Dot): return x.selected)
+	for dot :Dot in remove_dots:
 		dot.queue_free()
-	dots = dots.filter(func(x:Dot): return not x.selected)
-
+	data.dots = data.dots.filter(func(x:Dot): return not x.selected)
+	
+	var remove_anchors = data.anchors.filter(func(x:Anchor): return x.selected)
+	for anchor :Anchor in remove_anchors:
+		anchor.queue_free()
+	data.anchors = data.anchors.filter(func(x:Anchor): return not x.selected)
 
 func record_do():
 	undo_times = 0
-	DataSave.serialize(dots, segments)
+	data.serialize()
 
 func undo():
 	undo_times += 1
-	DataSave.deserialize_backup(self, dots, segments, undo_times)
+	data.deserialize_backup(undo_times)
 
 func _center_of_selected_nodes():
 	var center = Vector2.ZERO
 	var count = 0
-	for dot in dots:
+	for dot in data.dots:
 		if dot.selected:
 			center = center + dot.position
 			count += 1
@@ -241,7 +238,7 @@ func _center_of_selected_nodes():
 
 func align_horizontal():
 	var center = _center_of_selected_nodes()
-	for dot in dots:
+	for dot in data.dots:
 		if dot.selected:
 			var pos = dot.position
 			pos.y = center.y
@@ -249,7 +246,7 @@ func align_horizontal():
 
 func align_vertical():
 	var center = _center_of_selected_nodes()
-	for dot in dots:
+	for dot in data.dots:
 		if dot.selected:
 			var pos = dot.position
 			pos.x = center.x
@@ -257,13 +254,13 @@ func align_vertical():
 
 func delete_edge():
 	var to_be_removed = { }
-	for seg in segments:
+	for seg in data.segments:
 		var from = seg.get_from()
 		var to = seg.get_to()
 		if from.selected and to.selected:
 			to_be_removed[seg] = 0
 			seg.queue_free()
-	segments = segments.filter(func(seg:Segment): return not to_be_removed.has(seg))
+	data.segments = data.segments.filter(func(seg:Segment): return not to_be_removed.has(seg))
 
 func split():
 	var selected = get_selected_dots()
@@ -271,33 +268,33 @@ func split():
 		return
 	
 	var selectedSegments :Array[Segment] = []
-	selectedSegments.assign(segments.filter(func(seg:Segment): return selected.has(seg.get_from()) and selected.has(seg.get_to())))
+	selectedSegments.assign(data.segments.filter(func(seg:Segment): return selected.has(seg.get_from()) and selected.has(seg.get_to())))
 	if selectedSegments.size() == 0:
 		return
 	
 	for splitSeg in selectedSegments:
-		var a = splitSeg.get_from()
-		var b = splitSeg.get_to()
+		var a := splitSeg.get_from()
+		var b := splitSeg.get_to()
 		
 		# new node
-		var c = add_dot()
-		c.position = (a.position + b.position) / 2
+		var new_dot_position = (a.position + b.position) / 2
+		var c := data.new_dot(new_dot_position)
 		
 		# split segment [a -> b] change to [a -> c]
-		splitSeg.to = dots.size() - 1
+		splitSeg.to = data.dots.size() - 1
 		print(splitSeg.from, splitSeg.to)
 		
 		# new segment [b -> c]
-		add_link(b, c)
+		data.new_segment_from_dots(b, c)
 	
 func mirror_horizontal():
-	for dot in dots:
+	for dot in data.dots:
 		var p = dot.position
 		p.x = -p.x
 		dot.position = p
 
 func mirror_vertical():
-	for dot in dots:
+	for dot in data.dots:
 		var p = dot.position
 		p.y = -p.y
 		dot.position = p
@@ -317,7 +314,8 @@ const actions := [
 	"MirrorVertical",
 	"Save",
 	"Selection",
-	"SaveToDestination"
+	"SaveToDestination",
+	"AddAnchor",
 ]
 
 func _draw_op_hints():

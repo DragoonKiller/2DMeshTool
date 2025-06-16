@@ -79,3 +79,30 @@ func get_keys_for_action(action_name: String) -> Array:
 		elif e is InputEventJoypadButton:
 			keys.append("Joy" + str(e.button_index))
 	return keys
+
+# Convert a comma-separated string to an Array[int]
+func string_to_int_array(input: String) -> Array:
+	var result: Array = []
+	# Split string and process each token
+	for token in input.split(",", false):
+		var cleaned = token.strip_edges()
+		if cleaned.is_valid_int():
+			result.append(cleaned.to_int())
+		else:
+			push_error("Invalid integer token: '%s'" % cleaned)
+	return result
+
+# Convert an Array[int] to a comma-separated string
+func int_array_to_string(arr: Array) -> String:
+	var string_arr: Array = []
+	for item in arr:
+		if item is int:
+			string_arr.append(str(item))
+		else:
+			push_error("Array contains non-integer value: %s" % item)
+	return ", ".join(string_arr)
+
+
+func draw_centered_rect(node: Node2D, center: Vector2, size: Vector2, color: Color, filled := true):
+	var top_left = center - size / 2
+	node.draw_rect(Rect2(top_left, size), color, filled)
