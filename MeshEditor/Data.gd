@@ -116,6 +116,7 @@ func serialize_to_destination(pathOrigin: String):
 		poly = poly.map(func(x:Dot): return dots.find(x))
 		file.set_value("Polys", String.num_int64(i), poly)
 
+	var anchorPolys :Dictionary[String, int] = { }
 	for anchor in anchors:
 		var result = -1
 		for i in range(polys.size()):
@@ -124,12 +125,45 @@ func serialize_to_destination(pathOrigin: String):
 			if Geometry2D.is_point_in_polygon(anchor.position, positions):
 				result = i
 				break
+		anchorPolys[anchor.component_name] = result
 		file.set_value("AnchorPolys", anchor.component_name, result)
-		
 
 	var ok = file.save(path)
 	if ok != OK:
 		print("save error!", ok)
+	print("save to [" + ProjectSettings.globalize_path(path) + "]")
+	
+	serialize_to_lua(pathOrigin, dots, segments, anchors, polys, anchorPolys)
+	apply_polys_to_anchors(polys, anchorPolys)
+
+func serialize_to_lua(pathOrigin: String, _dots:Array[Dot], _segments:Array[Segment], _anchors:Array[AnchorPoint], polys:Array, anchorPolys:Dictionary[String, int]):
+	print("serialize to lua!")
+	var basename = pathOrigin.get_basename()
+	var path = basename + ".lua"
+	var file = FileAccess.open(path, FileAccess.WRITE)
+	
+	var dot_to_index = { }
+	for i in _dots.size():
+		dot_to_index[_dots[i]] = i
+	
+	file.store_string("local _dots = {\n")	
+	for i in _dots.size():
+		var dot = _dots[i]
+		var position_string = "Vector2(%.4f, %.4f)" % [dot.position.x, dot.position.y]
+		file.store_string("\t[%d] = %s;\n" % [i + 1, position_string])
+	file.store_string("}\n")
+	
+	file.store_string("local modules = { }\n")
+	for anchor in anchors:
+		file.store_string("modules[\"%s\"] = {\n" % anchor.component_name)
+		var poly = polys[anchorPolys[anchor.component_name]]
+		for i in poly.size():
+			file.store_string("\t[%d]=dots[%d];\n" % [i + 1, dot_to_index[poly[i]] + 1])
+		file.store_string("}\n")
+	
+	file.store_string("return modules\n")
+	file.close()
+	
 	print("save to [" + ProjectSettings.globalize_path(path) + "]")
 
 func deserialize_backup(n :int):
@@ -210,7 +244,7 @@ func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
 	anchor.position = position
 	anchor.name = anchor_name
 	anchor.component_name = anchor_name
-	print('anchor name:', anchor_name)
+	# print('anchor name:', anchor_name)
 	anchors.append(anchor)
 	root.add_child(anchor)
 	return anchor
@@ -238,6 +272,10 @@ func delete_selection():
 	anchors = anchors.filter(func(x:AnchorPoint): return not x.selected)
 
 
+func apply_polys_to_anchors(polys:Array, anchorPolys:Dictionary[String, int]):
+	for anchor in anchors:
+		anchor.show_poly(polys[anchorPolys[anchor.component_name]])
+
 # compute faces in 2D mesh.
 func compute_polys() -> Array:
 	# build adjacent map.
@@ -250,34 +288,69 @@ func compute_polys() -> Array:
 		fromList.append(to)
 		toList.append(from)
 	
-	var results = []
+	var results :Array = []
 	
 	# find faces. Start with an edge, and go with left-most edge.
+	var used = { }
+	for dot1 in dots:
+		used[dot1] = { }
+		for dot2 in dots:
+			used[dot1][dot2] = false
+	
 	for seg in segments:
+		if used[seg.from][seg.to]:
+			continue
+		used[seg.from][seg.to] = true
+		used[seg.to][seg.from] = true
+		
 		var current_path = [seg.from, seg.to]
 		var circle1 = compute_circle(current_path[0], current_path[1], adjacent_map)
-		if circle1.size() > 2:
+		var n = circle1.size()
+		if n > 2:
 			results.append(circle1)
+			for i in n:
+				used[circle1[i]][circle1[(i + 1) % n]] = true
 		var circle2 = compute_circle(current_path[1], current_path[0], adjacent_map)
-		if circle2.size() > 2:
+		n = circle2.size()
+		if n > 2:
 			results.append(circle2)
+			for i in n:
+				used[circle2[i]][circle2[(i + 1) % n]] = true
+	
+	var point_set_for_polys = { }
+	for poly :Array[Dot] in results:
+		var point_set :Dictionary[Dot, bool] = { }
+		for dot in poly:
+			point_set[dot] = true
+		point_set_for_polys[poly] = point_set
+	
+	var point_list_for_polys = { }
+	for poly :Array[Dot] in results:
+		var point_list := PackedVector2Array(poly.map(func(x:Dot): return x.position))
+		point_list_for_polys[poly] = point_list
+	
+	# remove the over-all convex.
+	for poly :Array[Dot] in results:
+		var is_valid = false
+		for dot in dots:
+			if poly.has(dot):
+				continue
+			if not Geometry2D.is_point_in_polygon(dot.position, point_list_for_polys[poly]):
+				is_valid = true
+				break
+		if not is_valid:
+			print('poly is invalid:', poly.map(func(x:Dot): return dots.find(x)))
+			results.erase(poly)
 	
 	# remove duplicates.
 	# same circles share the same point set. different circles have different point set.
 	# so we use point set to remove duplicates.
-	# build point set for each circle.
-	var point_set = { }
-	for result in results:
-		var point_set_for_this = { }
-		for dot in result:
-			point_set_for_this[dot] = true
-		point_set[result] = point_set_for_this
 	# remove duplicates.
 	var new_results = []
 	for i in results.size():
 		var is_duplicate = false
 		for j in range(i + 1, results.size()):
-			if Utils.is_same_set(point_set[results[i]], point_set[results[j]]):
+			if Utils.is_same_set(point_set_for_polys[results[i]], point_set_for_polys[results[j]]):
 				is_duplicate = true
 				break
 		if not is_duplicate:
@@ -301,7 +374,7 @@ func compute_circle(start_a:Dot, start_b:Dot, adjacent_map:Dictionary) -> Array[
 		if next_dot == start_a:
 			break
 		current_path.append(next_dot)
-	return current_path.duplicate()
+	return current_path
 
 
 func compute_next_walk(from:Dot, current:Dot, adjacent_map:Dictionary) -> Dot:

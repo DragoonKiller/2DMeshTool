@@ -1,10 +1,16 @@
 extends Node2D
 
+const Dot = preload("res://MeshEditor/Dot.gd")
+
 @export
 var component_name :String
 
 @export
 var selected :bool
+
+@export
+var poly :Array[Dot] = []
+
 
 const selected_color := Color(1, 1, 1, 1)
 const non_selected_color := Color(0.8, 0.6, 0.5, 1)
@@ -24,3 +30,12 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, 4, color, true)
 	if selected:
 		draw_string(Utils.font_default, Vector2.UP * 10, component_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		var poly_positions = PackedVector2Array(poly.map(func(x:Dot): return x.position - position))
+		var poly_color :Color = Color.RED
+		poly_color.a = 0.2
+		var colors = PackedColorArray([poly_color])
+		draw_polygon(poly_positions, colors)
+
+
+func show_poly(poly_to_show:Array[Dot]):
+	self.poly = poly_to_show

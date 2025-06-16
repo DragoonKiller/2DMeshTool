@@ -5,7 +5,7 @@ const AnchorPoint = preload("res://MeshEditor/AnchorPoint.gd")
 @export
 var anchor :AnchorPoint
 
-var text :TextEdit:
+var text :LineEdit:
 	get:
 		return find_child("Text")
 
@@ -16,10 +16,26 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not anchor:
 		return
+	# if anchor.selected:
+	# 	text.add_theme_color_override("background_color", Color(0.8, 1, 0.6, 1))
+	# else:
+	# 	text.add_theme_color_override("background_color", Color(1, 1, 1, 1))
+	
+	var style = StyleBoxFlat.new()
 	if anchor.selected:
-		text.set_line_background_color(0, Color(0.2, 0.3, 0.2, 1))
+		style.bg_color = Color(0.1, 0.2, 0.1, 1)
 	else:
-		text.set_line_background_color(0, Color(0, 0, 0, 0))
+		style.bg_color = Color(0.1, 0.1, 0.1, 1)
+	
+	# Set border color and width
+	style.border_color = Color(0.2, 0.2, 0.2)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	
+	text.add_theme_stylebox_override("normal", style)
+	text.add_theme_stylebox_override("focus", style)
 		
 func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed:

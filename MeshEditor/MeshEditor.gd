@@ -113,6 +113,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		
 		if not (path == null or path == ""):
 			data.serialize_to_destination(path)
+			
 		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("Selection"):
