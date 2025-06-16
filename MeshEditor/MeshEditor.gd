@@ -2,7 +2,7 @@ extends Node2D
 
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
-const Anchor = preload("res://MeshEditor/Anchor.gd")
+const AnchorPoint = preload("res://MeshEditor/AnchorPoint.gd")
 const SpriteDisplay = preload("res://MeshEditor/SpriteDisplay.gd")
 const Data = preload("res://MeshEditor/Data.gd")
 
@@ -19,7 +19,10 @@ var updateSelection :bool = false
 var updateMove :bool = false
 
 @export
-var positionCopy :Array[Vector2] = []
+var dotsPositionCopy :Array[Vector2] = []
+
+@export
+var anchorsPositionCopy :Array[Vector2] = []
 
 @export
 var selectedDotsIndex :Array[int] = []
@@ -39,52 +42,64 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	data.serialize()
 
-func _input(event):
+func _unhandled_input(event: InputEvent) -> void:
 	
 	if event.is_action_pressed("Delete"):
 		delete_selection()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("AddDot") and not event.is_action_pressed("AddDotLinked"):
 		data.new_dot(get_global_mouse_position())
 		record_do()
+		get_viewport().set_input_as_handled()
 		
 	if event.is_action_pressed("AddDotLinked"):
 		add_dot_linked()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("Link"):
 		try_link()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("CancelSelection"):
 		clear_selection()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("Undo"):
 		undo()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("AlignHorizontal"):
 		align_horizontal()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("AlignVertical"):
 		align_vertical()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("DeleteEdge"):
 		delete_edge()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("Split"):
 		split()
 		record_do()
+		get_viewport().set_input_as_handled()
 		
 	if event.is_action_pressed("MirrorHorizontal"):
 		mirror_horizontal()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("MirrorVertical"):
 		mirror_vertical()
 		record_do()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("AddAnchor"):
 		data.new_anchor(get_global_mouse_position(), "NewAnchor")
@@ -98,20 +113,24 @@ func _input(event):
 		
 		if not (path == null or path == ""):
 			data.serialize_to_destination(path)
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("Selection"):
 		dragFrom = get_global_mouse_position()
 		dragTo = dragFrom
 		if Input.is_key_pressed(KEY_SPACE):
 			updateMove = true
-			positionCopy.assign(data.dots.map(func(x): return x.position))
+			dotsPositionCopy.assign(data.dots.map(func(x): return x.position))
+			anchorsPositionCopy.assign(data.anchors.map(func(x): return x.position))
 		else:
 			if not Input.is_key_pressed(KEY_SHIFT):
 				clear_selection()
 			updateSelection = true
+		get_viewport().set_input_as_handled()
 	
 	if event is InputEventMouseMotion:
 		dragTo = get_global_mouse_position()
+		get_viewport().set_input_as_handled()
 	
 	if event.is_action_released("Selection"):
 		dragTo = dragFrom
@@ -119,6 +138,9 @@ func _input(event):
 			record_do()
 		updateMove = false
 		updateSelection = false
+		get_viewport().set_input_as_handled()
+		
+	
 
 func _notification(what):
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
@@ -133,9 +155,12 @@ func _process(_dt: float) -> void:
 	
 	if updateMove:
 		print(dragTo - dragFrom)
-		for i in range(data.dots.size()):
+		for i in data.dots.size():
 			if data.dots[i].selected:
-				data.dots[i].position = positionCopy[i] + (dragTo - dragFrom)
+				data.dots[i].position = dotsPositionCopy[i] + (dragTo - dragFrom)
+		for i in data.anchors.size():
+			if data.anchors[i].selected:
+				data.anchors[i].position = anchorsPositionCopy[i] + (dragTo - dragFrom)
 	
 	queue_redraw()
 
@@ -213,10 +238,10 @@ func delete_selection():
 		dot.queue_free()
 	data.dots = data.dots.filter(func(x:Dot): return not x.selected)
 	
-	var remove_anchors = data.anchors.filter(func(x:Anchor): return x.selected)
-	for anchor :Anchor in remove_anchors:
+	var remove_anchors = data.anchors.filter(func(x:AnchorPoint): return x.selected)
+	for anchor :AnchorPoint in remove_anchors:
 		anchor.queue_free()
-	data.anchors = data.anchors.filter(func(x:Anchor): return not x.selected)
+	data.anchors = data.anchors.filter(func(x:AnchorPoint): return not x.selected)
 
 func record_do():
 	undo_times = 0

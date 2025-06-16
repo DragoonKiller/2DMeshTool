@@ -31,17 +31,21 @@ func _ready() -> void:
 	else:
 		image_path = ""
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("AddTransparency"):
 		var color = modulate
 		color.a += 0.1
 		color.a = min(color.a, 1)
 		modulate = color
+		get_viewport().set_input_as_handled()
+		
 	if event.is_action_pressed("SubTransparency"):
 		var color = modulate
 		color.a -= 0.1
 		color.a = max(0.1, color.a)
 		modulate = color
+		get_viewport().set_input_as_handled()
+		
 	if event.is_action_pressed("OpenFile"):
 		if not dialog:
 			dialog = FileDialog.new()
@@ -60,6 +64,7 @@ func _input(event: InputEvent) -> void:
 		print('assigned image_path:', dialog.current_dir)
 		add_child(dialog)
 		dialog.show()
+		get_viewport().set_input_as_handled()
 
 func on_file_selected(path :String):
 	load_image(path)

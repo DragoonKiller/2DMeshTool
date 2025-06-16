@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3 uid="uid://cvvhxxm15op83"]
+
+[ext_resource type="Script" uid="uid://dxhmg5xist5rp" path="res://MeshEditor/UIAnchorEntry.gd" id="1_usfif"]
+
+[node name="UIAnchorEntry" type="Control"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_usfif")
+
+[node name="Text" type="LineEdit" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+text = "texttextdefault"

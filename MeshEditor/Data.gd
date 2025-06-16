@@ -1,10 +1,8 @@
-# BackupManager.gd
 extends Node
-class_name BackupManager
 
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
-const Anchor = preload("res://MeshEditor/Anchor.gd")
+const AnchorPoint = preload("res://MeshEditor/AnchorPoint.gd")
 
 const file_path = "user://data.txt"
 
@@ -15,7 +13,7 @@ var dots :Array[Dot] = []
 var segments :Array[Segment] = []
 
 @export
-var anchors :Array[Anchor] = []
+var anchors :Array[AnchorPoint] = []
 
 @export
 var root:Node
@@ -85,7 +83,7 @@ func serialize_core(file: ConfigFile, use_placeholder:bool):
 	if use_placeholder:
 		file.set_value("Anchors", "_", "_")
 	for i in anchors.size():
-		file.set_value("Anchors", String.num_int64(i), anchors[i].position)
+		file.set_value("Anchors", anchors[i].component_name, anchors[i].position)
 
 func serialize():
 	print("serialize!")
@@ -196,13 +194,15 @@ func new_segment_from_dots(from:Dot, to:Dot) -> Segment:
 		return
 	return new_segment(fromIndex, toIndex)
 	
-func new_anchor(position:Vector2, anchor_name:String = "") -> Anchor:
+func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
 	if anchor_name == null or anchor_name == "":
 		print('invalid name!')
 		return
-	var anchor = Anchor.new()
+	var anchor = AnchorPoint.new()
 	anchor.position = position
-	anchor.name = name
+	anchor.name = anchor_name
+	anchor.component_name = anchor_name
+	print('anchor name:', anchor_name)
 	anchors.append(anchor)
 	root.add_child(anchor)
 	return anchor
