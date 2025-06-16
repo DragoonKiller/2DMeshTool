@@ -76,8 +76,8 @@ func serialize_core(file: ConfigFile, use_placeholder:bool):
 	if use_placeholder:
 		file.set_value("Segments", "_", "_")
 	for i in segments.size():
-		var from: int = segments[i].from
-		var to: int = segments[i].to
+		var from = dots.find(segments[i].from)
+		var to = dots.find(segments[i].to)
 		file.set_value("Segments", String.num_int64(i), Vector2i(from, to))
 		
 	if use_placeholder:
@@ -109,6 +109,12 @@ func serialize_to_destination(pathOrigin: String):
 	var path = basename + ".txt"
 	var file = ConfigFile.new()
 	serialize_core(file, false)
+	
+	var polys = compute_polys()
+	for i in range(polys.size()):
+		var poly = polys[i]
+		poly = poly.map(func(x:Dot): return dots.find(x))
+		file.set_value("Polys", String.num_int64(i), poly)
 
 	var ok = file.save(path)
 	if ok != OK:
@@ -157,7 +163,8 @@ func deserialize(path = file_path):
 			continue
 		if not (0 <= value.y and value.y < dots.size()):
 			continue
-		new_segment(value.x, value.y)
+		assert(int(segKey) == segments.size())
+		new_segment(dots[value.x], dots[value.y])
 		
 	var anchorKeys = file.get_section_keys("Anchors")
 	for anchorKey in anchorKeys:
@@ -175,24 +182,14 @@ func new_dot(position:Vector2) -> Dot:
 	root.add_child(dot)
 	return dot
 
-func new_segment(from:int, to:int) -> Segment:
+func new_segment(from:Dot, to:Dot) -> Segment:
 	var segment = Segment.new()
 	segment.from = from
 	segment.to = to
-	segment.dotArray = dots
-	segment.name = String.num_int64(segments.size())
+	segment.name = String.num_uint64(segments.size())
 	segments.append(segment)
 	root.add_child(segment)
 	return segment
-
-func new_segment_from_dots(from:Dot, to:Dot) -> Segment:
-	var fromIndex = dots.find(from)
-	var toIndex = dots.find(to)
-	if fromIndex < 0:
-		return
-	if toIndex < 0:
-		return
-	return new_segment(fromIndex, toIndex)
 	
 func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
 	if anchor_name == null or anchor_name == "":
@@ -206,4 +203,109 @@ func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
 	anchors.append(anchor)
 	root.add_child(anchor)
 	return anchor
+
+func delete_selection():
+	# remove dots.
+	var remove_dots = dots.filter(func(x:Dot): return x.selected)
+	for dot :Dot in remove_dots:
+		dot.queue_free()
 	
+	# update data array.
+	dots = dots.filter(func(x:Dot): return not x.selected)
+	
+	# remove segments.
+	var remove_segments = segments.filter(func(x:Segment): return x.from.selected or x.to.selected)
+	for seg :Segment in remove_segments:
+		seg.queue_free()
+	segments = segments.filter(func(x:Segment): return not (x.from.selected or x.to.selected))
+	
+	# remove anchors.
+	var remove_anchors = anchors.filter(func(x:AnchorPoint): return x.selected)
+	for anchor :AnchorPoint in remove_anchors:
+		anchor.queue_free()
+
+	anchors = anchors.filter(func(x:AnchorPoint): return not x.selected)
+
+
+# compute faces in 2D mesh.
+func compute_polys() -> Array:
+	# build adjacent map.
+	var adjacent_map = { }
+	for seg in segments:
+		var from = seg.from
+		var to = seg.to
+		var fromList = adjacent_map.get_or_add(from, [])
+		var toList = adjacent_map.get_or_add(to, [])
+		fromList.append(to)
+		toList.append(from)
+	
+	var results = []
+	
+	# find faces. Start with an edge, and go with left-most edge.
+	for seg in segments:
+		var current_path = [seg.from, seg.to]
+		var circle1 = compute_circle(current_path[0], current_path[1], adjacent_map)
+		if circle1.size() > 2:
+			results.append(circle1)
+		var circle2 = compute_circle(current_path[1], current_path[0], adjacent_map)
+		if circle2.size() > 2:
+			results.append(circle2)
+	
+	# remove duplicates.
+	# same circles share the same point set. different circles have different point set.
+	# so we use point set to remove duplicates.
+	# build point set for each circle.
+	var point_set = { }
+	for result in results:
+		var point_set_for_this = { }
+		for dot in result:
+			point_set_for_this[dot] = true
+		point_set[result] = point_set_for_this
+	# remove duplicates.
+	var new_results = []
+	for i in results.size():
+		var is_duplicate = false
+		for j in range(i + 1, results.size()):
+			if Utils.is_same_set(point_set[results[i]], point_set[results[j]]):
+				is_duplicate = true
+				break
+		if not is_duplicate:
+			new_results.append(results[i])
+	
+	results = new_results
+	
+	return results
+
+
+func compute_circle(start_a:Dot, start_b:Dot, adjacent_map:Dictionary) -> Array[Dot]:
+	const max_repeat = 100000
+	var current_path :Array[Dot] = [start_a, start_b]
+	for i in max_repeat:
+		if i == max_repeat - 1:
+			print('too many iterations!')
+			break
+		var next_dot = compute_next_walk(current_path[-2], current_path[-1], adjacent_map)
+		if next_dot == null:
+			print('no next dot! id:', dots.find(current_path[-1]))
+		if next_dot == start_a:
+			break
+		current_path.append(next_dot)
+	return current_path.duplicate()
+
+
+func compute_next_walk(from:Dot, current:Dot, adjacent_map:Dictionary) -> Dot:
+	var next_list = adjacent_map.get(current)
+	var next_dot :Dot = null
+	var min_angle = PI + 1
+	for dot in next_list:
+		if dot == from or dot == current:
+			continue
+		var come_from = current.position - from.position
+		var go_to = dot.position - current.position
+		var angle = come_from.angle_to(go_to)
+		if angle < min_angle:
+			next_dot = dot
+			min_angle = angle
+		if next_dot == null:
+			return null
+	return next_dot

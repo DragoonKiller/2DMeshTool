@@ -1,5 +1,8 @@
 extends Node
 
+const Dot = preload("res://MeshEditor/Dot.gd")
+const Segment = preload("res://MeshEditor/Segment.gd")
+
 var main_camera:
 	get:
 		return get_viewport().get_camera_2d()
@@ -106,3 +109,54 @@ func int_array_to_string(arr: Array) -> String:
 func draw_centered_rect(node: Node2D, center: Vector2, size: Vector2, color: Color, filled := true):
 	var top_left = center - size / 2
 	node.draw_rect(Rect2(top_left, size), color, filled)
+
+
+static func _edge_key(a: int, b: int) -> String:
+	return str(min(a, b)) + "-" + str(max(a, b))
+
+static func _dfs(graph, visited_edges, loops, start: int, current: int, path: Array, visited_nodes: Dictionary):
+	for neighbor in graph[current]:
+		var key = _edge_key(current, neighbor)
+		if visited_edges.has(key):
+			continue
+		
+		visited_edges[key] = true
+		path.append(neighbor)
+		if neighbor == start and path.size() > 2:
+			loops.append(path.duplicate())
+		elif not visited_nodes.has(neighbor):
+			visited_nodes[neighbor] = true
+			_dfs(graph, visited_edges, loops, start, neighbor, path, visited_nodes)
+			visited_nodes.erase(neighbor)
+		path.pop_back()
+		visited_edges.erase(key)
+
+func find_simple_loops(dots: Array[Dot], segments: Array[Segment]) -> Array:
+	# build adjacent list
+	var graph = []
+	graph.resize(dots.size())
+	for i in range(dots.size()):
+		graph[i] = []
+	for seg in segments:
+		graph[seg.from].append(seg.to)
+		graph[seg.to].append(seg.from)
+	
+	var visited_edges = {}
+	var loops = []
+	
+	for i in range(dots.size()):
+		_dfs(graph, visited_edges, loops, i, i, [i], {i: true})
+	
+	return loops
+
+func turn_angle(center:Vector2, a:Vector2, b:Vector2) -> float:
+	return (a - center).angle_to(b - center)
+
+func is_same_set(a:Dictionary, b:Dictionary) -> bool:
+	for i in a:
+		if not b.has(i):
+			return false
+	for i in b:
+		if not a.has(i):
+			return false
+	return true

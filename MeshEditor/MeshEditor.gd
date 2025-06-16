@@ -45,7 +45,7 @@ func _exit_tree() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	
 	if event.is_action_pressed("Delete"):
-		delete_selection()
+		data.delete_selection()
 		get_viewport().set_input_as_handled()
 	
 	if event.is_action_pressed("AddDot") and not event.is_action_pressed("AddDotLinked"):
@@ -209,14 +209,14 @@ func try_link():
 	if selected.size() != 2:
 		return
 	for seg in data.segments:
-		var dot1 = seg.get_from()
-		var dot2 = seg.get_to()
+		var dot1 = seg.from
+		var dot2 = seg.to
 		if (dot1 == selected[0] and dot2 == selected[1]) or (dot1 == selected[0] and dot2 == selected[1]):
 			print('already linked')
 			return   # already linked
 	# not linked
 	print('link!')
-	return data.new_segment_from_dots(selected[0], selected[1])
+	return data.new_segment(selected[0], selected[1])
 
 func get_selected_dots() -> Array[Dot]:
 	return data.dots.filter(func(x:Dot): return x.selected)
@@ -226,22 +226,6 @@ func get_selection_rect():
 	var to = dragFrom.max(dragTo)
 	var rect = Rect2(from, to - from)
 	return rect
-
-func delete_selection():
-	var remove_segments = data.segments.filter(func(x:Segment): return x.get_from().selected or x.get_to().selected)
-	for seg :Segment in remove_segments:
-		seg.queue_free()
-	data.segments = data.segments.filter(func(x:Segment): return not (x.get_from().selected or x.get_to().selected))
-	
-	var remove_dots = data.dots.filter(func(x:Dot): return x.selected)
-	for dot :Dot in remove_dots:
-		dot.queue_free()
-	data.dots = data.dots.filter(func(x:Dot): return not x.selected)
-	
-	var remove_anchors = data.anchors.filter(func(x:AnchorPoint): return x.selected)
-	for anchor :AnchorPoint in remove_anchors:
-		anchor.queue_free()
-	data.anchors = data.anchors.filter(func(x:AnchorPoint): return not x.selected)
 
 func record_do():
 	undo_times = 0
@@ -298,19 +282,19 @@ func split():
 		return
 	
 	for splitSeg in selectedSegments:
-		var a := splitSeg.get_from()
-		var b := splitSeg.get_to()
+		var a := splitSeg.from
+		var b := splitSeg.to
 		
 		# new node
 		var new_dot_position = (a.position + b.position) / 2
 		var c := data.new_dot(new_dot_position)
 		
 		# split segment [a -> b] change to [a -> c]
-		splitSeg.to = data.dots.size() - 1
+		splitSeg.to = c
 		print(splitSeg.from, splitSeg.to)
 		
 		# new segment [b -> c]
-		data.new_segment_from_dots(b, c)
+		data.new_segment(b, c)
 	
 func mirror_horizontal():
 	for dot in data.dots:
