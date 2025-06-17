@@ -29,7 +29,8 @@ func _draw() -> void:
 	Utils.draw_centered_rect(self, Vector2.ZERO, Vector2(2, 10), color, true)
 	draw_circle(Vector2.ZERO, 4, color, true)
 	if selected:
-		draw_string(Utils.font_default, Vector2.UP * 10, component_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		if Utils.show_id_for_anchors:
+			draw_string(Utils.font_default, Vector2.UP * 10, component_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
 		var poly_positions = PackedVector2Array(poly.map(func(x:Dot): return x.position - position))
 		var poly_color :Color = Color.RED
 		poly_color.a = 0.2

@@ -3,6 +3,9 @@ extends Node
 const Dot = preload("res://MeshEditor/Dot.gd")
 const Segment = preload("res://MeshEditor/Segment.gd")
 
+var show_id_for_dots : bool = true
+var show_id_for_anchors : bool = true
+
 var main_camera:
 	get:
 		return get_viewport().get_camera_2d()

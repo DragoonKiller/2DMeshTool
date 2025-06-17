@@ -108,6 +108,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("Save"):
 		data.serialize()
 	
+	if event.is_action_pressed("ToggleShowDotId"):
+		Utils.show_id_for_dots = not Utils.show_id_for_dots
+	
+	if event.is_action_pressed("ToggleShowAnchorId"):
+		Utils.show_id_for_anchors = not Utils.show_id_for_anchors
+	
 	if event.is_action_pressed("SaveToDestination"):
 		var path :String = (get_parent().find_child("SpriteDisplay") as SpriteDisplay).image_path
 		
@@ -326,6 +332,8 @@ const actions := [
 	"Selection",
 	"SaveToDestination",
 	"AddAnchor",
+	"ToggleShowDotId",
+	"ToggleShowAnchorId",
 ]
 
 func _draw_op_hints():
@@ -337,5 +345,5 @@ func _draw_op_hints():
 		var pos = base_pos + Vector2.UP * line_height * i
 		var keys = Utils.get_keys_for_action(action)
 		var keyStrings = ", ".join(keys)
-		var text = "%s: %s" % [action, keyStrings]
+		var text = "%s: %s" % [keyStrings, action]
 		draw_string(Utils.font_default, pos / Utils.camera_zoom_scale, text, HORIZONTAL_ALIGNMENT_LEFT)
