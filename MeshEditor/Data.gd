@@ -108,33 +108,32 @@ func serialize_to_destination(pathOrigin: String):
 	var basename = pathOrigin.get_basename()
 	var path = basename + ".txt"
 	var file = ConfigFile.new()
-	serialize_core(file, false)
+	
+	for i in dots.size():
+		file.set_value("Dots", String.num_int64(i), dots[i].position)
 	
 	var polys = compute_polys()
-	for i in range(polys.size()):
-		var poly = polys[i]
-		poly = poly.map(func(x:Dot): return dots.find(x))
-		file.set_value("Polys", String.num_int64(i), poly)
-
-	var anchorPolys :Dictionary[String, int] = { }
+	
+	var dot_to_index = { }
+	for i in dots.size():
+		dot_to_index[dots[i]] = i
+	
 	for anchor in anchors:
 		var result = -1
-		for i in range(polys.size()):
+		for i in polys.size():
 			var poly = polys[i]
-			var positions = PackedVector2Array(poly.map(func(x:Dot): return x.position))
-			if Geometry2D.is_point_in_polygon(anchor.position, positions):
-				result = i
+			var poly_positions = poly.map(func(x:Dot): return x.position)
+			var packed_positions = PackedVector2Array(poly_positions)
+			if Geometry2D.is_point_in_polygon(anchor.position, packed_positions):
+				result = ",".join(poly.map(func(x:Dot): return String.num_int64(dot_to_index[x])))
 				break
-		anchorPolys[anchor.component_name] = result
-		file.set_value("AnchorPolys", anchor.component_name, result)
+		file.set_value("Modules", anchor.component_name, result)
+		
 
 	var ok = file.save(path)
 	if ok != OK:
 		print("save error!", ok)
 	print("save to [" + ProjectSettings.globalize_path(path) + "]")
-	
-	serialize_to_lua(pathOrigin, dots, segments, anchors, polys, anchorPolys)
-	apply_polys_to_anchors(polys, anchorPolys)
 
 func serialize_to_lua(pathOrigin: String, _dots:Array[Dot], _segments:Array[Segment], _anchors:Array[AnchorPoint], polys:Array, anchorPolys:Dictionary[String, int]):
 	print("serialize to lua!")
