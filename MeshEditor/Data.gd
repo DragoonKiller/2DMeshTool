@@ -119,19 +119,22 @@ func serialize_to_destination(pathOrigin: String):
 		dot_to_index[dots[i]] = i
 	
 	for anchor in anchors:
-		var result = -1
+		var indices :String = ""
+		var boundary :String = ""
 		for i in polys.size():
 			var poly :Array[Dot] = polys[i]
 			var poly_positions = poly.map(func(x:Dot): return x.position)
 			var packed_positions = PackedVector2Array(poly_positions)
 			if Geometry2D.is_point_in_polygon(anchor.position, packed_positions):
+				boundary = ",".join(poly.map(func(x:Dot): return String.num_int64(dot_to_index[x])))
 				var triangles = Geometry2D.triangulate_polygon(packed_positions)
 				var s = []
 				for j in triangles.size():
 					s.append(String.num_int64(dot_to_index[poly[triangles[j]]]))
-				result = ",".join(s)
+				indices = ",".join(s)
 				break
-		file.set_value("Modules", anchor.component_name, result)
+		file.set_value("Modules", anchor.component_name, indices)
+		file.set_value("ModulesBoundaries", anchor.component_name, boundary)
 		
 
 	var ok = file.save(path)
