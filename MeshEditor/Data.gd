@@ -121,11 +121,15 @@ func serialize_to_destination(pathOrigin: String):
 	for anchor in anchors:
 		var result = -1
 		for i in polys.size():
-			var poly = polys[i]
+			var poly :Array[Dot] = polys[i]
 			var poly_positions = poly.map(func(x:Dot): return x.position)
 			var packed_positions = PackedVector2Array(poly_positions)
 			if Geometry2D.is_point_in_polygon(anchor.position, packed_positions):
-				result = ",".join(poly.map(func(x:Dot): return String.num_int64(dot_to_index[x])))
+				var triangles = Geometry2D.triangulate_polygon(packed_positions)
+				var s = []
+				for j in triangles.size():
+					s.append(String.num_int64(dot_to_index[poly[triangles[j]]]))
+				result = ",".join(s)
 				break
 		file.set_value("Modules", anchor.component_name, result)
 		
