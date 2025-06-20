@@ -5,21 +5,22 @@ const AnchorPoint = preload("res://MeshEditor/AnchorPoint.gd")
 @export
 var anchor :AnchorPoint
 
-var text :LineEdit:
-	get:
-		return find_child("Text")
+@onready var nameText :LineEdit = $HBoxContainer/NameText
+@onready var typeText :LineEdit = $HBoxContainer/TypeText
 
 func _ready() -> void:
-	text.connect("focus_entered", on_focus_entered)
-	text.connect("text_changed", on_text_changed)
+	nameText.connect("focus_entered", name_on_focus_entered)
+	nameText.connect("text_changed", name_on_text_changed)
+	typeText.connect("focus_entered", type_on_focus_entered)
+	typeText.connect("text_changed", type_on_text_changed)
 
 func _process(_delta: float) -> void:
 	if not anchor:
 		return
 	# if anchor.selected:
-	# 	text.add_theme_color_override("background_color", Color(0.8, 1, 0.6, 1))
+	# 	nameText.add_theme_color_override("background_color", Color(0.8, 1, 0.6, 1))
 	# else:
-	# 	text.add_theme_color_override("background_color", Color(1, 1, 1, 1))
+	# 	nameText.add_theme_color_override("background_color", Color(1, 1, 1, 1))
 	
 	var style = StyleBoxFlat.new()
 	if anchor.selected:
@@ -34,8 +35,8 @@ func _process(_delta: float) -> void:
 	style.border_width_right = 1
 	style.border_width_bottom = 1
 	
-	text.add_theme_stylebox_override("normal", style)
-	text.add_theme_stylebox_override("focus", style)
+	nameText.add_theme_stylebox_override("normal", style)
+	nameText.add_theme_stylebox_override("focus", style)
 		
 func _unhandled_input(event):
 	if event is InputEventMouseButton and event.pressed:
@@ -45,15 +46,22 @@ func _unhandled_input(event):
 			if not focus.get_global_rect().has_point(click_pos):
 				focus.release_focus()
 
-func on_focus_entered():
+func name_on_focus_entered():
 	anchor.selected = true
 
-func on_text_changed(new_text:String):
+func name_on_text_changed(new_text:String):
 	anchor.component_name = new_text
+
+func type_on_focus_entered():
+	anchor.selected = true
+
+func type_on_text_changed(new_text:String):
+	anchor.type_name = new_text
 
 func set_source(source_anchor:AnchorPoint):
 	if anchor == source_anchor:
 		return
 	anchor = source_anchor
 	name = source_anchor.component_name
-	text.text = source_anchor.component_name
+	nameText.text = source_anchor.component_name
+	typeText.text = source_anchor.type_name

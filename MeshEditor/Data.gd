@@ -84,6 +84,7 @@ func serialize_core(file: ConfigFile, use_placeholder:bool):
 		file.set_value("Anchors", "_", "_")
 	for i in anchors.size():
 		file.set_value("Anchors", anchors[i].component_name, anchors[i].position)
+		file.set_value("AnchorType", anchors[i].component_name, anchors[i].type_name)
 
 func serialize():
 	print("serialize!")
@@ -135,6 +136,7 @@ func serialize_to_destination(pathOrigin: String):
 				break
 		file.set_value("Modules", anchor.component_name, indices)
 		file.set_value("ModulesBoundaries", anchor.component_name, boundary)
+		file.set_value("ModuleType", anchor.component_name, anchor.type_name)
 		
 
 	var ok = file.save(path)
@@ -221,8 +223,13 @@ func deserialize(path = file_path):
 	for anchorKey in anchorKeys:
 		if anchorKey == "_":
 			continue
-		var value :Vector2 = file.get_value("Anchors", anchorKey)
-		new_anchor(value, anchorKey)
+		var value :Vector2 = Vector2.ZERO
+		if file.get_value("Anchors", anchorKey) != null:
+			value = file.get_value("Anchors", anchorKey)
+		var type :String = ""
+		if file.get_value("AnchorType", anchorKey) != null:
+			type = file.get_value("AnchorType", anchorKey)
+		new_anchor(value, anchorKey, type)
 
 
 func new_dot(position:Vector2) -> Dot:
@@ -242,7 +249,7 @@ func new_segment(from:Dot, to:Dot) -> Segment:
 	root.add_child(segment)
 	return segment
 	
-func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
+func new_anchor(position:Vector2, anchor_name:String = "", anchor_type:String = "") -> AnchorPoint:
 	if anchor_name == null or anchor_name == "":
 		print('invalid name!')
 		return
@@ -250,6 +257,7 @@ func new_anchor(position:Vector2, anchor_name:String = "") -> AnchorPoint:
 	anchor.position = position
 	anchor.name = anchor_name
 	anchor.component_name = anchor_name
+	anchor.type_name = anchor_type
 	# print('anchor name:', anchor_name)
 	anchors.append(anchor)
 	root.add_child(anchor)

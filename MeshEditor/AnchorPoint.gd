@@ -6,6 +6,9 @@ const Dot = preload("res://MeshEditor/Dot.gd")
 var component_name :String
 
 @export
+var type_name :String = ""
+
+@export
 var selected :bool
 
 @export
