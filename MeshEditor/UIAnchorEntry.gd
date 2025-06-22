@@ -7,12 +7,16 @@ var anchor :AnchorPoint
 
 @onready var nameText :LineEdit = $HBoxContainer/NameText
 @onready var typeText :LineEdit = $HBoxContainer/TypeText
+@onready var groupText :LineEdit = $HBoxContainer/GroupText
 
 func _ready() -> void:
 	nameText.connect("focus_entered", name_on_focus_entered)
 	nameText.connect("text_changed", name_on_text_changed)
 	typeText.connect("focus_entered", type_on_focus_entered)
 	typeText.connect("text_changed", type_on_text_changed)
+	groupText.connect("text_changed", group_on_focus_entered)
+	groupText.connect("text_changed", group_on_text_changed)
+	
 
 func _process(_delta: float) -> void:
 	if not anchor:
@@ -58,6 +62,12 @@ func type_on_focus_entered():
 func type_on_text_changed(new_text:String):
 	anchor.type_name = new_text
 
+func group_on_focus_entered():
+	anchor.selected = true
+
+func group_on_text_changed(new_text:String):
+	anchor.group_name = new_text
+
 func set_source(source_anchor:AnchorPoint):
 	if anchor == source_anchor:
 		return
@@ -65,3 +75,4 @@ func set_source(source_anchor:AnchorPoint):
 	name = source_anchor.component_name
 	nameText.text = source_anchor.component_name
 	typeText.text = source_anchor.type_name
+	groupText.text = source_anchor.group_name

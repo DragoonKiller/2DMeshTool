@@ -9,6 +9,9 @@ var component_name :String
 var type_name :String = ""
 
 @export
+var group_name :String = ""
+
+@export
 var selected :bool
 
 @export

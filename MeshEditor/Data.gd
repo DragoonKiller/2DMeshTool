@@ -85,6 +85,7 @@ func serialize_core(file: ConfigFile, use_placeholder:bool):
 	for i in anchors.size():
 		file.set_value("Anchors", anchors[i].component_name, anchors[i].position)
 		file.set_value("AnchorType", anchors[i].component_name, anchors[i].type_name)
+		file.set_value("AnchorGroup", anchors[i].component_name, anchors[i].group_name)
 
 func serialize():
 	print("serialize!")
@@ -111,7 +112,7 @@ func serialize_to_destination(pathOrigin: String):
 	var file = ConfigFile.new()
 	
 	for i in dots.size():
-		file.set_value("Dots", String.num_int64(i), dots[i].position)
+		file.set_value("Dots", String.num_int64(i), -dots[i].position)
 	
 	var polys = compute_polys()
 	
@@ -137,41 +138,12 @@ func serialize_to_destination(pathOrigin: String):
 		file.set_value("Modules", anchor.component_name, indices)
 		file.set_value("ModulesBoundaries", anchor.component_name, boundary)
 		file.set_value("ModuleType", anchor.component_name, anchor.type_name)
+		file.set_value("ModuleGroup", anchor.component_name, anchor.group_name)
 		
 
 	var ok = file.save(path)
 	if ok != OK:
 		print("save error!", ok)
-	print("save to [" + ProjectSettings.globalize_path(path) + "]")
-
-func serialize_to_lua(pathOrigin: String, _dots:Array[Dot], _segments:Array[Segment], _anchors:Array[AnchorPoint], polys:Array, anchorPolys:Dictionary[String, int]):
-	print("serialize to lua!")
-	var basename = pathOrigin.get_basename()
-	var path = basename + ".lua"
-	var file = FileAccess.open(path, FileAccess.WRITE)
-	
-	var dot_to_index = { }
-	for i in _dots.size():
-		dot_to_index[_dots[i]] = i
-	
-	file.store_string("local _dots = {\n")	
-	for i in _dots.size():
-		var dot = _dots[i]
-		var position_string = "Vector2(%.4f, %.4f)" % [dot.position.x, dot.position.y]
-		file.store_string("\t[%d] = %s;\n" % [i + 1, position_string])
-	file.store_string("}\n")
-	
-	file.store_string("local modules = { }\n")
-	for anchor in anchors:
-		file.store_string("modules[\"%s\"] = {\n" % anchor.component_name)
-		var poly = polys[anchorPolys[anchor.component_name]]
-		for i in poly.size():
-			file.store_string("\t[%d]=dots[%d];\n" % [i + 1, dot_to_index[poly[i]] + 1])
-		file.store_string("}\n")
-	
-	file.store_string("return modules\n")
-	file.close()
-	
 	print("save to [" + ProjectSettings.globalize_path(path) + "]")
 
 func deserialize_backup(n :int):
@@ -229,7 +201,10 @@ func deserialize(path = file_path):
 		var type :String = ""
 		if file.get_value("AnchorType", anchorKey) != null:
 			type = file.get_value("AnchorType", anchorKey)
-		new_anchor(value, anchorKey, type)
+		var group :String = ""
+		if file.get_value("AnchorGroup", anchorKey) != null:
+			group = file.get_value("AnchorGroup", anchorKey)
+		new_anchor(value, anchorKey, type, group)
 
 
 func new_dot(position:Vector2) -> Dot:
@@ -249,7 +224,7 @@ func new_segment(from:Dot, to:Dot) -> Segment:
 	root.add_child(segment)
 	return segment
 	
-func new_anchor(position:Vector2, anchor_name:String = "", anchor_type:String = "") -> AnchorPoint:
+func new_anchor(position:Vector2, anchor_name:String = "", anchor_type:String = "", anchor_group:String = "") -> AnchorPoint:
 	if anchor_name == null or anchor_name == "":
 		print('invalid name!')
 		return
@@ -258,6 +233,7 @@ func new_anchor(position:Vector2, anchor_name:String = "", anchor_type:String = 
 	anchor.name = anchor_name
 	anchor.component_name = anchor_name
 	anchor.type_name = anchor_type
+	anchor.group_name = anchor_group
 	# print('anchor name:', anchor_name)
 	anchors.append(anchor)
 	root.add_child(anchor)
